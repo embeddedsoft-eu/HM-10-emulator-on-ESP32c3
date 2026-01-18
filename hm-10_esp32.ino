@@ -5,11 +5,11 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 
-/* ===== HM-10 UUIDs ===== */
+// ===== HM-10 UUIDs ===== 
 #define SERVICE_UUID "0000FFE0-0000-1000-8000-00805F9B34FB"
 #define CHAR_UUID    "0000FFE1-0000-1000-8000-00805F9B34FB"
 
-/* ===== UART (как у HM-10) ===== */
+// ===== UART (as HM-10) ===== 
 #define UART_RX_PIN 20
 #define UART_TX_PIN 21
 #define UART_BAUD   9600  
@@ -23,11 +23,12 @@ BLECharacteristic *uartChar;
 Preferences prefs;
 
 String deviceName = "HM-10";
-bool uartToBleEnabled = true;
-
 bool debug_msg_on = true;
 
-/* ===== AT ===== */
+
+bool uartToBleEnabled = true;
+
+// ===== AT ===== 
 bool isAT(const String &s) {
   return s.startsWith("AT");
 }
@@ -73,7 +74,7 @@ class RxCallbacks : public BLECharacteristicCallbacks {
     }
     Serial.println();
 
-    // ===== BLE -> UART (СТРОГО binary, как HM-10) =====
+    // ===== BLE -> UART ( binary HM-10) =====
     uart1.write((uint8_t*)v.data(), v.length());
 
     // ===== AT-команды (только для BLE-ответа) =====
@@ -90,7 +91,7 @@ class RxCallbacks : public BLECharacteristicCallbacks {
 };
 
 
-/* ===== BLE server callbacks ===== */
+// ===== BLE server callbacks ===== 
 class ServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer*) override {
     Serial.println("[BLE] connected");
@@ -131,13 +132,13 @@ void setupBLE() {
 }
 
 void setup() {
-  /* ===== USB Serial (диагностика) ===== */
+  // ===== USB Serial (diagnostic) ===== 
   Serial.begin(115200);
-  while (!Serial) delay(10);
+ // while (!Serial) delay(10);
 
   Serial.println("SERIAL OK");
 
-  /* ===== UART как у HM-10 ===== */
+  // ===== UART как у HM-10 ===== 
   uart1.begin(
     UART_BAUD,
     SERIAL_8N1,
@@ -149,7 +150,7 @@ void setup() {
   Serial.println(UART_BAUD);
 
   prefs.begin("hm10", false);
-  deviceName = prefs.getString("name", "HM-10");
+  //deviceName = prefs.getString("name", "HM-10");
 
   Serial.println("ESP32-C3 HM emulator");
   Serial.println("Name: " + deviceName);
@@ -157,30 +158,14 @@ void setup() {
   setupBLE();
 }
 
-/*
-void loop() {
-  // UART -> BLE (как у HM-10) 
-  while (uart1.available()) {
-    uint8_t b = uart1.read();
-  
-    Serial.print("[UART RX HEX] ");
-    if (b < 0x10) Serial.print("0");
-    Serial.println(b, HEX);
-  
-    if (uartToBleEnabled) {
-      uartChar->setValue(&b, 1);
-      uartChar->notify();
-    }
-  }
-}
-*/
+
 
 void loop() {
   static uint8_t uartBuf[UART_BUF_SIZE];
   static size_t uartLen = 0;
   static uint32_t lastByteTime = 0;
 
-  // ===== Читаем UART =====
+  // ===== read UART =====
   while (uart1.available()) {
     uint8_t b = uart1.read();
 
@@ -197,14 +182,14 @@ void loop() {
     lastByteTime = millis();
   }
 
-  // ===== Если данные есть и таймаут вышел — отправляем ВЕСЬ пакет =====
+  // ===== timout =====
   if (uartLen > 0 && (millis() - lastByteTime) >= UART_PACKET_TIMEOUT_MS) {
     uartChar->setValue(uartBuf, uartLen);
-    uartChar->notify();   // <<< ОДИН notify НА ВЕСЬ ПАКЕТ
+    uartChar->notify();   //  one notify for all packet
 
     Serial.print("[UART -> BLE PACKET] len=");
     Serial.println(uartLen);
 
-    uartLen = 0; // очистить буфер
+    uartLen = 0; // clean buffer
   }
 }
